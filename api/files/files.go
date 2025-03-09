@@ -10,6 +10,7 @@ import (
 
 func DataHandler(c *gin.Context) {
 	var files []models.File
-	database.GetDB().Find(&files)
+	// order by id desc
+	database.GetDB().Order("created_at desc").Order("downloaded asc").Find(&files)
 	c.JSON(http.StatusOK, files)
 }

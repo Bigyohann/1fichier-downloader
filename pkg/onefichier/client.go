@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/cavaliergopher/grab/v3"
 )
@@ -91,10 +90,10 @@ func GetDownloadLink(url string) (string, error) {
 	return responseDownload.Url, nil
 }
 
-func DownloadFile(url string) (string, error) {
+func DownloadFile(url string) (*grab.Response, error) {
 	downloadLink, err := GetDownloadLink(url)
 	if err != nil {
-		return "", err
+		fmt.Println("Error getting download link")
 	}
 
 	// create client
@@ -104,40 +103,15 @@ func DownloadFile(url string) (string, error) {
 	// start download
 	fmt.Printf("Downloading %v...\n", req.URL())
 	resp := client.Do(req)
-
-	// start UI loop
-	t := time.NewTicker(500 * time.Millisecond)
-	defer t.Stop()
-
-Loop:
-	for {
-		select {
-		case <-t.C:
-			fmt.Printf("  transferred %v/%vMB (%.2f%%)\n",
-				int(resp.BytesComplete())/(1024*1024),
-				int(resp.Size())/(1024*1024),
-				100*resp.Progress())
-
-		case <-resp.Done:
-			// download is complete
-			break Loop
-		}
-	}
-
-	// check for errors
-	if err := resp.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
-	}
-
-	fmt.Printf("Download saved to %v \n", resp.Filename)
-	return resp.Filename, nil
+	return resp, nil
 }
 
 func GetFileData(url string) (ResponseFileData, error) {
 	client := &http.Client{
 		Transport: nil,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			panic("TODO")
+			fmt.Println("Redirecting")
+			return nil
 		},
 		Jar:     nil,
 		Timeout: 0,
