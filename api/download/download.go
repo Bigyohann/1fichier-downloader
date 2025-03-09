@@ -22,15 +22,18 @@ func DownloadHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// exemple of url https://1fichier.com/?imlkq5gsl1igb7vu57kp&af=651048
-	// we need to remove the &af=value
 
 	file := downloader.HandleDownloadFile(fileData.Url)
 	c.JSON(http.StatusOK, file)
 }
 
 func DataHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "data"})
+	var json PostDownload
+	c.BindJSON(&json)
+
+	fileData, _ := onefichier.GetFileData(sanitizeUrl(json.Url))
+
+	c.JSON(http.StatusOK, fileData)
 }
 
 func sanitizeUrl(url string) string {

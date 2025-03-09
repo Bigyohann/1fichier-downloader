@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 
 	"github.com/cavaliergopher/grab/v3"
+    log "github.com/sirupsen/logrus"
 )
 
 type PostDownload struct {
@@ -93,7 +93,7 @@ func GetDownloadLink(url string) (string, error) {
 func DownloadFile(url string) (*grab.Response, error) {
 	downloadLink, err := GetDownloadLink(url)
 	if err != nil {
-		fmt.Println("Error getting download link")
+    log.Error("Error getting download link")
 	}
 
 	// create client
@@ -101,7 +101,7 @@ func DownloadFile(url string) (*grab.Response, error) {
 	req, _ := grab.NewRequest(os.Getenv("DOWNLOAD_PATH"), downloadLink)
 
 	// start download
-	fmt.Printf("Downloading %v...\n", req.URL())
+	log.Info("Downloading %v...\n", req.URL())
 	resp := client.Do(req)
 	return resp, nil
 }
@@ -110,7 +110,7 @@ func GetFileData(url string) (ResponseFileData, error) {
 	client := &http.Client{
 		Transport: nil,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			fmt.Println("Redirecting")
+			log.Warn("Redirecting")
 			return nil
 		},
 		Jar:     nil,
@@ -131,12 +131,12 @@ func GetFileData(url string) (ResponseFileData, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		return ResponseFileData{}, errors.New("Error getting file data")
 	}
 
 	resBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		return ResponseFileData{}, errors.New("Error reading response body")
 	}
 	responseFileData := ResponseFileData{}
 	json.Unmarshal(resBody, &responseFileData)

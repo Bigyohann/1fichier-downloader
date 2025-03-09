@@ -5,8 +5,10 @@ import (
 	"bigyohann/apidownloader/internal/database"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -22,7 +24,11 @@ func main() {
 	godotenv.Load(".env." + env)
 	godotenv.Load() // The Original .env
 
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetOutput(os.Stdout)
+	log.Warn("This is a warning")
 	r := gin.Default()
+	r.Use(cors.Default())
 	api.HandleRouter(r)
 	database.InitDatabase()
 

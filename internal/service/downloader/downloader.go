@@ -4,14 +4,17 @@ import (
 	"bigyohann/apidownloader/internal/database"
 	"bigyohann/apidownloader/internal/database/models"
 	"bigyohann/apidownloader/pkg/onefichier"
-	"fmt"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func downloadFile(url string, file models.File) {
 	// download file
 	resp, err := onefichier.DownloadFile(url)
+	file.Status = "Downloading"
+	db := database.GetDB()
+	db.Save(&file)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -19,12 +22,11 @@ func downloadFile(url string, file models.File) {
 
 	t := time.NewTicker(500 * time.Millisecond)
 	defer t.Stop()
-
 Loop:
 	for {
 		select {
 		case <-t.C:
-			fmt.Printf("  transferred %v/%vMB (%.2f%%)\n",
+			log.Printf("  transferred %v/%vMB (%.2f%%)\n",
 				int(resp.BytesComplete())/(1024*1024),
 				int(resp.Size())/(1024*1024),
 				100*resp.Progress())
@@ -32,6 +34,7 @@ Loop:
 		case <-resp.Done:
 			// download is complete
 			file.Downloaded = true
+			file.Status = "Downloaded"
 			db := database.GetDB()
 			db.Save(&file)
 			break Loop
@@ -42,7 +45,7 @@ Loop:
 func HandleDownloadFile(url string) models.File {
 	fileData, err := onefichier.GetFileData(url)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 
 	file := models.File{}
@@ -50,7 +53,7 @@ func HandleDownloadFile(url string) models.File {
 	db.Where("filename = ?", fileData.Filename).First(&file)
 
 	if file.ID != 0 {
-		fmt.Println("File already downloaded / in download")
+		log.Info("File already downloaded / in download")
 		return file
 	}
 
@@ -62,6 +65,7 @@ func HandleDownloadFile(url string) models.File {
 		ContentType: fileData.ContentType,
 		Checksum:    fileData.Checksum,
 		Date:        fileData.Date,
+		Status:      "Created",
 	}
 	db.Create(&file)
 
