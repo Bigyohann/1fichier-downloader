@@ -3,6 +3,7 @@ package main
 import (
 	"bigyohann/apidownloader/api"
 	"bigyohann/apidownloader/internal/database"
+	"bigyohann/apidownloader/internal/service"
 	"os"
 
 	"github.com/gin-contrib/cors"
@@ -31,6 +32,8 @@ func main() {
 	r.Use(cors.Default())
 	api.HandleRouter(r)
 	database.InitDatabase()
+
+	service.CreateJwt()
 
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
