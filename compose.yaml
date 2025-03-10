@@ -1,0 +1,29 @@
+services:
+  mercure:
+    # The official Mercure image
+    image: dunglas/mercure
+    restart: unless-stopped
+    environment:
+      # Disables Mercure.rocks auto-HTTPS feature, HTTPS must be handled at edge by Traefik or another proxy in front of it
+      SERVER_NAME: ':3000'
+      MERCURE_PUBLISHER_JWT_KEY: '!ChangeThisMercureHubJWTSecretKey!'
+      MERCURE_SUBSCRIBER_JWT_KEY: '!ChangeThisMercureHubJWTSecretKey!'
+      CORS_ALLOWED_ORIGINS: '*'
+      ALLOW_ANONYMOUS: 1
+    # Enables the development mode, comment the following line to run the hub in prod mode
+    command: /usr/bin/caddy run --config /etc/caddy/dev.Caddyfile 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost/healthz"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - mercure_data:/data
+      - mercure_config:/config
+    ports:
+      - 3000:3000
+
+
+volumes:
+  mercure_data:
+  mercure_config:

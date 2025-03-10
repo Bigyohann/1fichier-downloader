@@ -12,6 +12,7 @@ func HandleRouter(r *gin.Engine) *gin.Engine {
 	r.POST("/download/get", download.DownloadHandler)
 	r.GET("/download/data", download.DataHandler)
 
-	r.GET("/files", files.DataHandler)
+	r.GET("/files", files.GetAllFiles)
+	r.GET("/files/downloading", files.GetDowloadingFiles)
 	return r
 }
