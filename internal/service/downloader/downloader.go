@@ -1,20 +1,20 @@
 package downloader
 
 import (
+	"encoding/json"
+	"os"
+	"time"
+
 	"bigyohann/apidownloader/internal/database"
 	"bigyohann/apidownloader/internal/database/models"
 	"bigyohann/apidownloader/internal/service"
-	"bigyohann/apidownloader/pkg/onefichier"
-	"encoding/json"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func downloadFile(url string, file models.File) {
+func downloadFile(client DownloadClient, url string, file models.File) {
 	// download file
-	//
-	resp, err := onefichier.DownloadFile(url)
+	resp, err := client.DownloadFile(url, os.Getenv("DOWNLOAD_PATH"))
 	file.Status = "Downloading"
 	db := database.GetDB()
 	db.Save(&file)
@@ -69,8 +69,8 @@ Loop:
 	}
 }
 
-func HandleDownloadFile(url string) models.File {
-	fileData, err := onefichier.GetFileData(url)
+func HandleDownloadFile(client DownloadClient, url string) models.File {
+	fileData, err := client.GetFileData(url)
 	if err != nil {
 		log.Error(err)
 	}
@@ -87,7 +87,7 @@ func HandleDownloadFile(url string) models.File {
 	file = models.File{
 		Filename:    fileData.Filename,
 		Size:        fileData.Size,
-		Url:         fileData.Url,
+		URL:         fileData.URL,
 		Downloaded:  false,
 		ContentType: fileData.ContentType,
 		Checksum:    fileData.Checksum,
@@ -96,7 +96,7 @@ func HandleDownloadFile(url string) models.File {
 	}
 	db.Create(&file)
 
-	go downloadFile(url, file)
+	go downloadFile(client, url, file)
 
 	return file
 }

@@ -1,3 +1,4 @@
+// Package database handles the database connection and initialization.
 package database
 
 import (
@@ -16,7 +17,7 @@ func InitDatabase() *gorm.DB {
 	}
 	dbConn = db
 
-	models.InitDbFileModel(db)
+	models.InitDBFileModel(db)
 
 	return db
 }

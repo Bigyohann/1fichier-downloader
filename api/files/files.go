@@ -1,9 +1,11 @@
+// Package files handles file-related operations in the API.
 package files
 
 import (
+	"net/http"
+
 	"bigyohann/apidownloader/internal/database"
 	"bigyohann/apidownloader/internal/database/models"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
