@@ -1,3 +1,4 @@
+// Package api
 package api
 
 import (
@@ -7,10 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// import routes from download.go
 func HandleRouter(r *gin.Engine) *gin.Engine {
-	r.POST("/download/get", download.DownloadHandler)
-	r.GET("/download/data", download.DataHandler)
+	r.POST("/download/:provider/get", download.DownloadHandler)
+	r.POST("/download/:provider/data", download.DataHandler)
 
 	r.GET("/files", files.GetAllFiles)
 	r.GET("/files/downloading", files.GetDowloadingFiles)

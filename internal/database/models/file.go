@@ -1,3 +1,4 @@
+// Package models
 package models
 
 import (
@@ -6,7 +7,7 @@ import (
 
 type File struct {
 	Model
-	Url         string `json:"url"`
+	URL         string `json:"url"`
 	Filename    string `json:"filename"`
 	Size        int    `json:"size"`
 	Date        string `json:"date"`
@@ -16,6 +17,6 @@ type File struct {
 	Status      string `json:"status"`
 }
 
-func InitDbFileModel(db *gorm.DB) {
+func InitDBFileModel(db *gorm.DB) {
 	db.AutoMigrate(&File{})
 }

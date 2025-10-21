@@ -1,42 +1,65 @@
+// Package download provides handlers for downloading files and retrieving file data.
 package download
 
 import (
-	"bigyohann/apidownloader/internal/service/downloader"
-	"bigyohann/apidownloader/pkg/onefichier"
 	"net/http"
 	"strings"
+
+	"bigyohann/apidownloader/internal/service/downloader"
 
 	"github.com/gin-gonic/gin"
 )
 
 type PostDownload struct {
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 
 func DownloadHandler(c *gin.Context) {
-	var json PostDownload
-	c.BindJSON(&json)
-	json.Url = sanitizeUrl(json.Url)
-	fileData, err := onefichier.GetFileData(json.Url)
+	downloadClient, err := getClientWithProvider(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider"})
 		return
 	}
 
-	file := downloader.HandleDownloadFile(fileData.Url)
+	var json PostDownload
+	if err := c.BindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	json.URL = sanitizeURL(json.URL)
+
+	file := downloader.HandleDownloadFile(downloadClient, json.URL)
+
 	c.JSON(http.StatusOK, file)
 }
 
-func DataHandler(c *gin.Context) {
-	var json PostDownload
-	c.BindJSON(&json)
+func getClientWithProvider(c *gin.Context) (downloader.DownloadClient, error) {
+	downloadClient, err := GetClient(c.Param("provider"))
+	if err != nil {
+		return nil, err
+	}
+	return downloadClient, nil
+}
 
-	fileData, _ := onefichier.GetFileData(sanitizeUrl(json.Url))
+func DataHandler(c *gin.Context) {
+	downloadClient, err := getClientWithProvider(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider"})
+		return
+	}
+
+	var json PostDownload
+	if err := c.BindJSON(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	fileData, _ := downloadClient.GetFileData(sanitizeURL(json.URL))
 
 	c.JSON(http.StatusOK, fileData)
 }
 
-func sanitizeUrl(url string) string {
+func sanitizeURL(url string) string {
 	if strings.Contains(url, "&af=") {
 		url = strings.Split(url, "&af=")[0]
 	}

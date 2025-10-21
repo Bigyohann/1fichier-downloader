@@ -1,3 +1,4 @@
+// Package onefichier implements functions to interact with the 1fichier API.
 package onefichier
 
 import (
@@ -8,27 +9,33 @@ import (
 	"net/http"
 	"os"
 
+	"bigyohann/apidownloader/internal/service/downloader"
+
 	"github.com/cavaliergopher/grab/v3"
-    log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
+// Client implements the downloader.DownloadClient interface for 1fichier.
+type Client struct{}
+
 type PostDownload struct {
-	Url    string `json:"url"`
+	URL    string `json:"url"`
 	Pretty int    `json:"pretty"`
 }
 
 type ResponseDownload struct {
-	Url    string `json:"url"`
+	URL    string `json:"url"`
 	Status string `json:"status"`
 }
 
 type ResponseFileData struct {
 	Pass        int    `json:"pass"`
 	Description string `json:"description"`
-	Acl         int    `json:"acl"`
+	ACL         int    `json:"acl"`
 	Cdn         int    `json:"cdn"`
 	Inline      int    `json:"inline"`
-	Url         string `json:"url"`
+
+	URL         string `json:"url"`
 	Filename    string `json:"filename"`
 	Size        int    `json:"size"`
 	Date        string `json:"date"`
@@ -46,7 +53,7 @@ func getRequest(method, path string, body io.Reader) (*http.Request, error) {
 	return req, nil
 }
 
-func GetDownloadLink(url string) (string, error) {
+func (c *Client) getDownloadLink(url string) (string, error) {
 	// call the API to get the download link
 
 	client := &http.Client{
@@ -59,13 +66,13 @@ func GetDownloadLink(url string) (string, error) {
 	}
 
 	postDownload := PostDownload{
-		Url:    url,
+		URL:    url,
 		Pretty: 1,
 	}
-	postDownloadJson, err := json.Marshal(postDownload)
-	bodyReader := bytes.NewReader([]byte(postDownloadJson))
+	postDownloadJSON, _ := json.Marshal(postDownload)
+	bodyReader := bytes.NewReader([]byte(postDownloadJSON))
 
-	req, err := getRequest(
+	req, _ := getRequest(
 		"POST",
 		"https://api.1fichier.com/v1/download/get_token.cgi",
 		bodyReader,
@@ -73,40 +80,40 @@ func GetDownloadLink(url string) (string, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", errors.New("Error getting download link")
+		return "", errors.New("error getting download link")
 	}
 
 	resBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.New("Error reading response body")
+		return "", errors.New("error reading response body")
 	}
 	responseDownload := ResponseDownload{}
 	json.Unmarshal(resBody, &responseDownload)
 
 	if responseDownload.Status != "OK" {
-		return "", errors.New("Error getting download link")
+		return "", errors.New("error getting download link")
 	}
 
-	return responseDownload.Url, nil
+	return responseDownload.URL, nil
 }
 
-func DownloadFile(url string) (*grab.Response, error) {
-	downloadLink, err := GetDownloadLink(url)
+func (c *Client) DownloadFile(url string, destinationPath string) (*grab.Response, error) {
+	downloadLink, err := c.getDownloadLink(url)
 	if err != nil {
-    log.Error("Error getting download link")
+		log.Error("Error getting download link")
 	}
 
 	// create client
 	client := grab.NewClient()
-	req, _ := grab.NewRequest(os.Getenv("DOWNLOAD_PATH"), downloadLink)
+	req, _ := grab.NewRequest(destinationPath, downloadLink)
 
 	// start download
-	log.Info("Downloading %v...\n", req.URL())
+	log.Infof("Downloading %v...\n", req.URL())
 	resp := client.Do(req)
 	return resp, nil
 }
 
-func GetFileData(url string) (ResponseFileData, error) {
+func (c *Client) GetFileData(url string) (downloader.FileInfo, error) {
 	client := &http.Client{
 		Transport: nil,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -118,28 +125,37 @@ func GetFileData(url string) (ResponseFileData, error) {
 	}
 
 	postDownload := PostDownload{
-		Url:    url,
+		URL:    url,
 		Pretty: 1,
 	}
-	postDownloadJson, err := json.Marshal(postDownload)
-	bodyReader := bytes.NewReader([]byte(postDownloadJson))
+	postDownloadJSON, _ := json.Marshal(postDownload)
+	bodyReader := bytes.NewReader([]byte(postDownloadJSON))
 
-	req, err := getRequest(
+	req, _ := getRequest(
 		"POST",
 		"https://api.1fichier.com/v1/file/info.cgi",
 		bodyReader)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return ResponseFileData{}, errors.New("Error getting file data")
+		return downloader.FileInfo{}, errors.New("error getting file data")
 	}
 
 	resBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return ResponseFileData{}, errors.New("Error reading response body")
+		return downloader.FileInfo{}, errors.New("error reading response body")
 	}
 	responseFileData := ResponseFileData{}
 	json.Unmarshal(resBody, &responseFileData)
 
-	return responseFileData, nil
+	fileInfo := downloader.FileInfo{
+		Filename:    responseFileData.Filename,
+		Size:        responseFileData.Size,
+		URL:         responseFileData.URL,
+		ContentType: responseFileData.ContentType,
+		Checksum:    responseFileData.Checksum,
+		Date:        responseFileData.Date,
+	}
+
+	return fileInfo, nil
 }
